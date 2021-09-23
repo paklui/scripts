@@ -1,0 +1,120 @@
+#!/bin/bash
+
+DATE=$(date +%y%m%d_%H%M%S)
+export INSTALL_DIR=$PWD
+export MY_UCX_DIR=$INSTALL_DIR/ucx
+export OMPI_DIR=$INSTALL_DIR/ompi
+export GDR_DIR=$INSTALL_DIR/gdrcopy
+export LD_LIBRARY_PATH=$GDR_DIR/lib64:$LD_LIBRARY_PATH
+export MPIRUN=$OMPI_DIR/bin/mpirun
+LOG=log.setup-${DATE}.txt
+
+
+SetupGDRcopy () {
+    if [ "$1" = true ]; then
+        echo "Cloning fresh copy of GDRcopy"
+        rm -rf gdrcopy || return 1
+                git clone https://github.com/NVIDIA/gdrcopy.git -b v1.3
+                #git clone https://github.com/NVIDIA/gdrcopy.git # api issue
+                cd gdrcopy || return 1
+                mkdir -p $GDR_DIR/lib64 $GDR_DIR/include
+                make PREFIX=$GDR_DIR lib install driver
+        ./insmod.sh
+        cd ..  || return 1
+    fi
+}
+
+# Function to setup UCX (set input to true to do fresh clone from git)
+SetupUCX () {
+    if [ "$1" = true ]; then
+        echo "Cloning fresh copy of UCX"
+        rm -rf ucx || return 1
+        #git clone https://github.com/openucx/ucx.git -b v1.8.x || return 1
+        git clone https://github.com/openucx/ucx.git -b v1.10.x || return 1
+        #git clone https://github.com/openucx/ucx.git || return 1
+        cd ucx  || return 1
+        ./autogen.sh 2>&1 | tee -a $LOG || return 1
+        cd ..  || return 1
+    fi
+
+    cd ucx || return 1
+    mkdir -p build  || return 1
+    cd build  || return 1
+    #../contrib/configure-release --prefix=${MY_UCX_DIR} --with-rocm=/opt/rocm --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
+    ../contrib/configure-release --prefix=${MY_UCX_DIR} --with-rocm=/opt/rocm --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} 2>&1 | tee -a $LOG|| return 1
+    make -j 8  2>&1 | tee -a $LOG || return 1
+    make install 2>&1 | tee -a $LOG || return 1
+    cd ../..  || return 1
+}
+
+# Function to setup OpenMPI
+SetupOpenMPI () {
+    if [ "$1" = true ]; then
+        echo "Cloning fresh copy of OpenMPI"
+        rm -rf ./ompi
+        git clone https://github.com/open-mpi/ompi.git -b v4.1.x || return 1
+        cd ompi || return 1
+        ./autogen.pl || return 1
+        cd ..
+    fi
+
+    cd ompi || return 1
+    mkdir build || return 1
+    cd build || return 1
+    ../configure --prefix=$OMPI_DIR --with-ucx=$MY_UCX_DIR --enable-mca-no-build=btl-uct || return 1
+    make -j 8 || return 1
+    make install || return 1
+    cd ../..
+}
+
+# Function to setup OSU benchmarks
+SetupOSUBenchmarks () {
+    if [ "$1" = true ]; then
+        echo "Cloning fresh copy of OSU benchmarks"
+        rm -rf osu
+        wget https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-5.7.tar.gz
+        tar xvf osu-micro-benchmarks-5.7.tar.gz
+        mv osu-micro-benchmarks-5.7 osu
+        #git clone https://github.com/yuq/osu-micro-benchmarks-5.3.2.git osu || return 1
+        #git clone https://github.com/paklui/osu-micro-benchmarks.git osu || return 1
+        #git clone https://github.com/ROCmSoftwarePlatform/hipOMB.git osu || return 1
+    fi
+
+    cd osu || return 1
+        #automake --add-missing || return 1
+        autoreconf -ivf || return 1
+        ./configure --enable-rocm --with-rocm=/opt/rocm CC=$OMPI_DIR/bin/mpicc CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L$OMPI_DIR/lib/ -lmpi -L/opt/rocm/lib/ -lamdhip64" CPPFLAGS="-std=c++11" || return 1
+        #./configure --enable-rocm --with-rocm=/opt/rocm CC=$OMPI_DIR/bin/mpic++ CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L$OMPI_DIR/lib/ -lmpi -L/opt/rocm/lib/ -lamdhip64 -Wl,-rpath,/opt/rocm/lib" CPPFLAGS="-std=c++11" || return 1
+    make -j 8 || return 1
+    cd .. || return 1
+}
+
+# Function to run intranode (domestic) tests
+RunDomesticTests () {
+    for TEST in osu_latency osu_bw; do
+        for MEM1 in D ; do
+        for MEM2 in D ; do
+            LOG=log.${TEST}-${MEM1}MEM1-${MEM2}MEM2-${HOSTNAME}-${DATE}.txt
+            #CMD="$MPIRUN -np 2 -x UCX_RNDV_THRESH=8192 --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc,rocm_gdr osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 0 1"
+            CMD="$MPIRUN -np 2 -x UCX_RNDV_THRESH=512 --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 "
+            echo $CMD
+            echo $CMD >> $LOG
+                 $CMD 2>&1 | tee -a $LOG || return 1
+        done
+        done
+    done
+}
+
+# Function to run internode (international) tests
+RunInternationalTests () {
+    $MPIRUN -np 2 -x UCX_IB_REG_METHODS=odp -x LD_LIBRARY_PATH=/opt/rocm/lib --host localhost,localhost --mca pml ucx -x UCX_LOG_LEVEL=TRACE -x UCX_TLS=rc,sm,rocm_copy,rocm_ipc osu/mpi/pt2pt/osu_bw -d rocm D D 0 1 || return 1
+}
+
+# Set parameter to true to do fresh clone from git, otherwise only recompiles
+#SetupGDRcopy       $1 || { echo "[ERROR] Unable to install GDRcopy";  exit 1; }
+SetupUCX           $1 || { echo "[ERROR] Unable to install UCX";      exit 1; }
+SetupOpenMPI       $1 || { echo "[ERROR] Unable to install OpenMPI";  exit 1; }
+SetupOSUBenchmarks $1 || { echo "[ERROR] Unable to install OSUbench"; exit 1; }
+
+RunDomesticTests      || { echo "[ERROR] Unable to run domestic tests";      exit 1; }
+#RunInternationalTests || { echo "[ERROR] Unable to run international tests"; exit 1; }
