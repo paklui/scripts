@@ -1,1 +1,1 @@
-# ompi-install
+# scripts
