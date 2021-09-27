@@ -1,0 +1,49 @@
+#%Module######################################################################
+##
+##      gcc v 11.2.0 compiler modulefile
+##
+proc ModulesHelp { } {
+        puts stderr "Sets up the paths you need to use gcc compilers."
+}
+
+set sys        [uname sysname]
+
+set modname     [module-info name]
+set modmode     [module-info mode]
+
+set base /opt/gcc
+set version gcc-11.2.0
+set prereq /opt/gcc
+
+set mpc mpc-1.2.1
+set gmp gmp-6.2.0
+set mpfr mpfr-4.1.0
+set isl isl-0.15
+
+setenv MPICC_CC gcc
+setenv MPICXX_CXX g++
+
+set logr        "/usr/bin"
+
+if { $modmode == "switch1" } {
+        set modmode "switchfrom"
+}
+if { $modmode == "switch2" } {
+        set modmode "switchto"
+}
+if { $modmode != "switch3" } {
+        system  "$logr/logger -p local2.info envmodule $modmode $modname"
+}
+
+if { $sys == "Linux" } {
+
+        if { [file exists "/bin/uname"]} {
+                        prepend-path PATH $base/$version/bin
+                        prepend-path LD_LIBRARY_PATH  $base/$version/lib64
+                        prepend-path LD_LIBRARY_PATH  $prereq/$mpc/lib
+                        prepend-path LD_LIBRARY_PATH  $prereq/$mpfr/lib
+                        prepend-path LD_LIBRARY_PATH  $prereq/$gmp/lib
+                        prepend-path LD_LIBRARY_PATH  $prereq/$isl/lib
+                        prepend-path MANPATH $base/$version/man
+        }
+}
