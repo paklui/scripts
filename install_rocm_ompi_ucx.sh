@@ -95,8 +95,13 @@ RunDomesticTests () {
         for MEM1 in D ; do
         for MEM2 in D ; do
             LOG=log.${TEST}-${MEM1}MEM1-${MEM2}MEM2-${HOSTNAME}-${DATE}.txt
+            OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k -x UCX_RNDV_FRAG_SIZE=4m "
+            #OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k "
+            #OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k "
+            OPTION+="-x UCX_RNDV_THRESH=128 "
+
             #CMD="$MPIRUN -np 2 -x UCX_RNDV_THRESH=8192 --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc,rocm_gdr osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 0 1"
-            CMD="$MPIRUN -np 2 -x UCX_RNDV_THRESH=512 --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 "
+            CMD="$MPIRUN -np 2 $OPTION --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 "
             echo $CMD
             echo $CMD >> $LOG
                  $CMD 2>&1 | tee -a $LOG || return 1
