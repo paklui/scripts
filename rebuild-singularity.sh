@@ -1,32 +1,39 @@
 #!/bin/bash
 
-#BASEDIR=${HOME}/install
-BASEDIR=/opt/singularity
+BASEDIR=${HOME}/install
+#BASEDIR=/opt/singularity
 mkdir $BASEDIR
 cd $BASEDIR
 
-export VERSION=1.16.4 OS=linux ARCH=amd64
-wget https://dl.google.com/go/go$VERSION.$OS-$ARCH.tar.gz
-tar -C $BASEDIR -xzvf go$VERSION.$OS-$ARCH.tar.gz
+#
+# setup go
+#
+
+export VERSION=1.17.2 OS=linux ARCH=amd64
+wget https://dl.google.com/go/go$VERSION.$OS-$ARCH.tar.gz && \
+tar -C $BASEDIR -xzvf go$VERSION.$OS-$ARCH.tar.gz && \
 rm go$VERSION.$OS-$ARCH.tar.gz
 
+echo "export BASEDIR=${BASEDIR}" >> ${BASEDIR}/env.bashrc
 echo "export GOPATH=${BASEDIR}/go" >> ${BASEDIR}/env.bashrc
 echo 'export PATH=${BASEDIR}/go/bin:${PATH}:${BASEDIR}/bin' >> ${BASEDIR}/env.bashrc
 chmod a+x ${BASEDIR}/env.bashrc
 source ${BASEDIR}/env.bashrc
+
+#
+# setup singularity
+#
+
+export VERSION=3.9.0-rc.3 && # adjust this as necessary \
+wget https://github.com/sylabs/singularity/releases/download/v${VERSION}/singularity-ce-${VERSION}.tar.gz && \
+tar -xzf singularity-ce-${VERSION}.tar.gz && \
+cd singularity-ce-${VERSION}
+#./mconfig && \
+#./mconfig --prefix=/opt/singularity
+./mconfig --prefix=$BASEDIR
+make -C ./builddir && \
+make -C ./builddir install
+
 which go
-#/usr/bin/go
-
-export VERSION=3.7.3 && # adjust this as necessary
-    mkdir -p $GOPATH/src/github.com/sylabs &&
-    cd $GOPATH/src/github.com/sylabs &&
-    wget https://github.com/sylabs/singularity/releases/download/v${VERSION}/singularity-${VERSION}.tar.gz &&
-    tar -xzf singularity-${VERSION}.tar.gz &&
-    cd ./singularity &&
-    #./mconfig --without-suid --prefix=$BASEDIR &&
-    ./mconfig --prefix=$BASEDIR &&
-    make -C ./builddir &&
-    make -C ./builddir install
-
 which singularity
 #/usr/local/bin/singularity
