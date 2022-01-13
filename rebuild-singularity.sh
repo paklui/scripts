@@ -30,7 +30,7 @@ tar -xzf singularity-ce-${VERSION}.tar.gz && \
 cd singularity-ce-${VERSION}
 #./mconfig && \
 #./mconfig --prefix=/opt/singularity
-./mconfig --prefix=$BASEDIR
+./mconfig --prefix=$BASEDIR --without-suid
 make -C ./builddir && \
 make -C ./builddir install
 
