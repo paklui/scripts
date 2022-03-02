@@ -1,7 +1,8 @@
 #!/bin/bash
 
-BASEDIR=${HOME}/install
-#BASEDIR=/opt/singularity
+# create directory called ${HOME}/singularity, or /opt/singularity, and have this script to execute in that directory
+#BASEDIR=${HOME}/singularity/install
+BASEDIR=/opt/singularity
 mkdir $BASEDIR
 cd $BASEDIR
 
@@ -24,7 +25,7 @@ source ${BASEDIR}/env.bashrc
 # setup singularity
 #
 
-export VERSION=3.9.0-rc.3 && # adjust this as necessary \
+export VERSION=3.9.5 && # adjust this as necessary \
 wget https://github.com/sylabs/singularity/releases/download/v${VERSION}/singularity-ce-${VERSION}.tar.gz && \
 tar -xzf singularity-ce-${VERSION}.tar.gz && \
 cd singularity-ce-${VERSION}
