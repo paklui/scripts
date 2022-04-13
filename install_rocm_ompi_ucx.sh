@@ -9,6 +9,7 @@ export LD_LIBRARY_PATH=$GDR_DIR/lib64:$LD_LIBRARY_PATH
 export MPIRUN=$OMPI_DIR/bin/mpirun
 LOG=log.setup-${DATE}.txt
 
+# sudo apt install -y automake autoconf libtool m4 libnuma-dev libpciaccess-dev
 
 SetupGDRcopy () {
     if [ "$1" = true ]; then
@@ -29,7 +30,7 @@ SetupUCX () {
     if [ "$1" = true ]; then
         echo "Cloning fresh copy of UCX"
         rm -rf ucx || return 1
-        #git clone https://github.com/openucx/ucx.git -b v1.8.x || return 1
+        #git clone https://github.com/openucx/ucx.git -b v1.12.x || return 1
         git clone https://github.com/openucx/ucx.git -b v1.10.x || return 1
         #git clone https://github.com/openucx/ucx.git || return 1
         cd ucx  || return 1
@@ -72,19 +73,14 @@ SetupOSUBenchmarks () {
     if [ "$1" = true ]; then
         echo "Cloning fresh copy of OSU benchmarks"
         rm -rf osu
-        wget https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-5.7.tar.gz
-        tar xvf osu-micro-benchmarks-5.7.tar.gz
-        mv osu-micro-benchmarks-5.7 osu
-        #git clone https://github.com/yuq/osu-micro-benchmarks-5.3.2.git osu || return 1
-        #git clone https://github.com/paklui/osu-micro-benchmarks.git osu || return 1
-        #git clone https://github.com/ROCmSoftwarePlatform/hipOMB.git osu || return 1
+        wget https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-5.9.tar.gz
+        tar xvf osu-micro-benchmarks-5.9.tar.gz
+        mv osu-micro-benchmarks-5.9 osu
     fi
 
     cd osu || return 1
-        #automake --add-missing || return 1
         autoreconf -ivf || return 1
         ./configure --enable-rocm --with-rocm=/opt/rocm CC=$OMPI_DIR/bin/mpicc CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L$OMPI_DIR/lib/ -lmpi -L/opt/rocm/lib/ -lamdhip64" CPPFLAGS="-std=c++11" || return 1
-        #./configure --enable-rocm --with-rocm=/opt/rocm CC=$OMPI_DIR/bin/mpic++ CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L$OMPI_DIR/lib/ -lmpi -L/opt/rocm/lib/ -lamdhip64 -Wl,-rpath,/opt/rocm/lib" CPPFLAGS="-std=c++11" || return 1
     make -j 8 || return 1
     cd .. || return 1
 }
