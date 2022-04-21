@@ -73,7 +73,7 @@ SetupOSUBenchmarks () {
     if [ "$1" = true ]; then
         echo "Cloning fresh copy of OSU benchmarks"
         rm -rf osu
-        wget https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-5.9.tar.gz
+        wget --no-check-certificate https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-5.9.tar.gz
         tar xvf osu-micro-benchmarks-5.9.tar.gz
         mv osu-micro-benchmarks-5.9 osu
     fi
