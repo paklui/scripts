@@ -11,7 +11,7 @@ cd $BASEDIR
 #
 
 export VERSION=1.17.2 OS=linux ARCH=amd64
-wget https://dl.google.com/go/go$VERSION.$OS-$ARCH.tar.gz && \
+wget -c https://dl.google.com/go/go$VERSION.$OS-$ARCH.tar.gz && \
 tar -C $BASEDIR -xzvf go$VERSION.$OS-$ARCH.tar.gz && \
 rm go$VERSION.$OS-$ARCH.tar.gz
 
@@ -25,9 +25,11 @@ source ${BASEDIR}/env.bashrc
 # setup singularity
 #
 
-export VERSION=3.9.5 && # adjust this as necessary \
-wget https://github.com/sylabs/singularity/releases/download/v${VERSION}/singularity-ce-${VERSION}.tar.gz && \
-tar -xzf singularity-ce-${VERSION}.tar.gz && \
+#wget https://github.com/sylabs/singularity/releases/download/v${VERSION}/singularity-ce-${VERSION}.tar.gz && \
+#tar -xzvf singularity-ce-${VERSION}.tar.gz && \
+
+export VERSION=3.9.9 && # adjust this as necessary \
+git clone git@github.com:sylabs/singularity.git -b v${VERSION} singularity-ce-${VERSION} \
 cd singularity-ce-${VERSION}
 #./mconfig && \
 #./mconfig --prefix=/opt/singularity
@@ -37,4 +39,3 @@ make -C ./builddir install
 
 which go
 which singularity
-#/usr/local/bin/singularity
