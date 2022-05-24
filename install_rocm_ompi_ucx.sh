@@ -2,9 +2,11 @@
 
 DATE=$(date +%y%m%d_%H%M%S)
 export INSTALL_DIR=$PWD
-export MY_UCX_DIR=$INSTALL_DIR/ucx
-export OMPI_DIR=$INSTALL_DIR/ompi
+export ROCM_DIR=/opt/rocm
 export GDR_DIR=$INSTALL_DIR/gdrcopy
+export XPMEM_DIR=${INSTALL_DIR}/xpmem
+export UCX_DIR=$INSTALL_DIR/ucx
+export OMPI_DIR=$INSTALL_DIR/ompi
 export LD_LIBRARY_PATH=$GDR_DIR/lib64:$LD_LIBRARY_PATH
 export MPIRUN=$OMPI_DIR/bin/mpirun
 LOG=log.setup-${DATE}.txt
@@ -25,14 +27,28 @@ SetupGDRcopy () {
     fi
 }
 
+SetupXPMEM () {
+    if [ "$1" = true ]; then
+        echo "Cloning fresh copy of XPMEM"
+        rm -rf xpmem || return 1
+        git clone https://github.com/hjelmn/xpmem.git
+        cd xpmem || return 1
+        ./autogen.sh
+        ./configure --prefix=${UCX_DIR}
+        make -j
+        make install
+        sudo insmod ${UCX_DIR}/lib/modules/$(uname -r)/kernel/xpmem/xpmem.ko
+        cd ..  || return 1
+    fi
+}
+
+
 # Function to setup UCX (set input to true to do fresh clone from git)
 SetupUCX () {
     if [ "$1" = true ]; then
         echo "Cloning fresh copy of UCX"
         rm -rf ucx || return 1
-        #git clone https://github.com/openucx/ucx.git -b v1.12.x || return 1
-        git clone https://github.com/openucx/ucx.git -b v1.10.x || return 1
-        #git clone https://github.com/openucx/ucx.git || return 1
+        git clone https://github.com/openucx/ucx.git -b v1.13.x || return 1
         cd ucx  || return 1
         ./autogen.sh 2>&1 | tee -a $LOG || return 1
         cd ..  || return 1
@@ -41,8 +57,8 @@ SetupUCX () {
     cd ucx || return 1
     mkdir -p build  || return 1
     cd build  || return 1
-    #../contrib/configure-release --prefix=${MY_UCX_DIR} --with-rocm=/opt/rocm --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
-    ../contrib/configure-release --prefix=${MY_UCX_DIR} --with-rocm=/opt/rocm --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} 2>&1 | tee -a $LOG|| return 1
+    #../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
+    ../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --with-xpmem=${XPMEM_DIR} 2>&1 | tee -a $LOG|| return 1
     make -j 8  2>&1 | tee -a $LOG || return 1
     make install 2>&1 | tee -a $LOG || return 1
     cd ../..  || return 1
@@ -62,7 +78,7 @@ SetupOpenMPI () {
     cd ompi || return 1
     mkdir build || return 1
     cd build || return 1
-    ../configure --prefix=$OMPI_DIR --with-ucx=$MY_UCX_DIR --enable-mca-no-build=btl-uct || return 1
+    ../configure --prefix=$OMPI_DIR --with-ucx=$UCX_DIR --enable-mca-no-build=btl-uct || return 1
     make -j 8 || return 1
     make install || return 1
     cd ../..
@@ -80,7 +96,7 @@ SetupOSUBenchmarks () {
 
     cd osu || return 1
         autoreconf -ivf || return 1
-        ./configure --enable-rocm --with-rocm=/opt/rocm CC=$OMPI_DIR/bin/mpicc CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L$OMPI_DIR/lib/ -lmpi -L/opt/rocm/lib/ -lamdhip64" CPPFLAGS="-std=c++11" || return 1
+        ./configure --enable-rocm --with-rocm=$ROCM_DIR CC=$OMPI_DIR/bin/mpicc CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L${OMPI_DIR}/lib/ -lmpi -L${ROCM_DIR}/lib/ -lamdhip64" CPPFLAGS="-std=c++11" || return 1
     make -j 8 || return 1
     cd .. || return 1
 }
@@ -108,11 +124,12 @@ RunDomesticTests () {
 
 # Function to run internode (international) tests
 RunInternationalTests () {
-    $MPIRUN -np 2 -x UCX_IB_REG_METHODS=odp -x LD_LIBRARY_PATH=/opt/rocm/lib --host localhost,localhost --mca pml ucx -x UCX_LOG_LEVEL=TRACE -x UCX_TLS=rc,sm,rocm_copy,rocm_ipc osu/mpi/pt2pt/osu_bw -d rocm D D 0 1 || return 1
+    $MPIRUN -np 2 -x UCX_IB_REG_METHODS=odp -x LD_LIBRARY_PATH=${ROCM_DIR}/lib --host localhost,localhost --mca pml ucx -x UCX_LOG_LEVEL=TRACE -x UCX_TLS=rc,sm,rocm_copy,rocm_ipc osu/mpi/pt2pt/osu_bw -d rocm D D 0 1 || return 1
 }
 
 # Set parameter to true to do fresh clone from git, otherwise only recompiles
 #SetupGDRcopy       $1 || { echo "[ERROR] Unable to install GDRcopy";  exit 1; }
+SetupXPMEM         $1 || { echo "[ERROR] Unable to install XPMEM"     exit 1; }
 SetupUCX           $1 || { echo "[ERROR] Unable to install UCX";      exit 1; }
 SetupOpenMPI       $1 || { echo "[ERROR] Unable to install OpenMPI";  exit 1; }
 SetupOSUBenchmarks $1 || { echo "[ERROR] Unable to install OSUbench"; exit 1; }
