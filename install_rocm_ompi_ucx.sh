@@ -11,7 +11,10 @@ export LD_LIBRARY_PATH=$GDR_DIR/lib64:$LD_LIBRARY_PATH
 export MPIRUN=$OMPI_DIR/bin/mpirun
 LOG=log.setup-${DATE}.txt
 
-# sudo apt install -y automake autoconf libtool m4 libnuma-dev libpciaccess-dev
+# for OMPI and UCX
+# sudo apt install -y automake autoconf libtool m4 libnuma-dev libpciaccess-dev vim git wget
+# for XPMEM
+# sudo apt install linux-source linux-hwe-5.13-source-5.13.0 linux-hwe-5.13-headers-5.13.0-35 linux-tools-$(uname -r)
 
 SetupGDRcopy () {
     if [ "$1" = true ]; then
@@ -32,14 +35,14 @@ SetupXPMEM () {
         echo "Cloning fresh copy of XPMEM"
         rm -rf xpmem || return 1
         git clone https://github.com/hjelmn/xpmem.git
-        cd xpmem || return 1
-        ./autogen.sh
-        ./configure --prefix=${UCX_DIR}
-        make -j
-        make install
-        sudo insmod ${UCX_DIR}/lib/modules/$(uname -r)/kernel/xpmem/xpmem.ko
-        cd ..  || return 1
     fi
+    cd xpmem || return 1
+    ./autogen.sh
+    ./configure --prefix=${UCX_DIR}
+    make -j
+    make install
+    sudo insmod ${UCX_DIR}/lib/modules/$(uname -r)/kernel/xpmem/xpmem.ko
+    cd ..  || return 1
 }
 
 
@@ -57,8 +60,8 @@ SetupUCX () {
     cd ucx || return 1
     mkdir -p build  || return 1
     cd build  || return 1
-    #../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
-    ../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --with-xpmem=${XPMEM_DIR} 2>&1 | tee -a $LOG|| return 1
+    ../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
+    #../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --with-xpmem=${XPMEM_DIR} 2>&1 | tee -a $LOG|| return 1
     make -j 8  2>&1 | tee -a $LOG || return 1
     make install 2>&1 | tee -a $LOG || return 1
     cd ../..  || return 1
@@ -129,7 +132,7 @@ RunInternationalTests () {
 
 # Set parameter to true to do fresh clone from git, otherwise only recompiles
 #SetupGDRcopy       $1 || { echo "[ERROR] Unable to install GDRcopy";  exit 1; }
-SetupXPMEM         $1 || { echo "[ERROR] Unable to install XPMEM"     exit 1; }
+#SetupXPMEM         $1 || { echo "[ERROR] Unable to install XPMEM"     exit 1; }
 SetupUCX           $1 || { echo "[ERROR] Unable to install UCX";      exit 1; }
 SetupOpenMPI       $1 || { echo "[ERROR] Unable to install OpenMPI";  exit 1; }
 SetupOSUBenchmarks $1 || { echo "[ERROR] Unable to install OSUbench"; exit 1; }
