@@ -12,7 +12,7 @@ export MPIRUN=$OMPI_DIR/bin/mpirun
 LOG=log.setup-${DATE}.txt
 
 # for OMPI and UCX
-# sudo apt install -y automake autoconf libtool m4 libnuma-dev libpciaccess-dev vim git wget
+# sudo apt install -y automake autoconf libtool m4 flex libnuma-dev libpciaccess-dev vim git wget
 # for XPMEM
 # sudo apt install linux-source linux-hwe-5.13-source-5.13.0 linux-hwe-5.13-headers-5.13.0-35 linux-tools-$(uname -r)
 
