@@ -60,8 +60,9 @@ SetupUCX () {
     cd ucx || return 1
     mkdir -p build  || return 1
     cd build  || return 1
-    ../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
+    #../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --with-gdrcopy=${GDR_DIR} --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --enable-mt 2>&1 | tee -a $LOG|| return 1
     #../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} --with-xpmem=${XPMEM_DIR} 2>&1 | tee -a $LOG|| return 1
+    ../contrib/configure-release --prefix=${UCX_DIR} --with-rocm=$ROCM_DIR --enable-gtest --enable-examples --with-mpi=${OMPI_DIR} 2>&1 | tee -a $LOG|| return 1
     make -j 8  2>&1 | tee -a $LOG || return 1
     make install 2>&1 | tee -a $LOG || return 1
     cd ../..  || return 1
