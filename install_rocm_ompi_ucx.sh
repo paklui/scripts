@@ -114,7 +114,7 @@ RunDomesticTests () {
             OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k -x UCX_RNDV_FRAG_SIZE=rocm:4m "
             #OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k "
             #OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k "
-            OPTION+="-x UCX_RNDV_THRESH=128 "
+            OPTION+="-x UCX_RNDV_THRESH=64 "
 
             #CMD="$MPIRUN -np 2 -x UCX_RNDV_THRESH=8192 --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc,rocm_gdr osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 0 1"
             CMD="$MPIRUN -np 2 $OPTION --mca osc ucx --mca spml ucx -x LD_LIBRARY_PATH -x UCX_LOG_LEVEL=TRACE_DATA --allow-run-as-root -mca pml ucx -x UCX_TLS=sm,self,rocm_copy,rocm_ipc osu/mpi/pt2pt/${TEST} -d rocm $MEM1 $MEM2 "
