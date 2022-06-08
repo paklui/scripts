@@ -100,7 +100,7 @@ SetupOSUBenchmarks () {
 
     cd osu || return 1
         autoreconf -ivf || return 1
-        ./configure --enable-rocm --with-rocm=$ROCM_DIR CC=$OMPI_DIR/bin/mpicc CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L${OMPI_DIR}/lib/ -lmpi -L${ROCM_DIR}/lib/ -lamdhip64" CPPFLAGS="-std=c++11" || return 1
+        ./configure --enable-rocm --with-rocm=$ROCM_DIR CC=$OMPI_DIR/bin/mpicc CXX=$OMPI_DIR/bin/mpicxx LDFLAGS="-L${OMPI_DIR}/lib/ -lmpi -L${ROCM_DIR}/lib/ -lamdhip64 -Wl,-rpath=${ROCM_DIR}/lib" CPPFLAGS="-std=c++11" || return 1
     make -j 8 || return 1
     cd .. || return 1
 }
@@ -111,7 +111,7 @@ RunDomesticTests () {
         for MEM1 in D ; do
         for MEM2 in D ; do
             LOG=log.${TEST}-${MEM1}MEM1-${MEM2}MEM2-${HOSTNAME}-${DATE}.txt
-            OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k -x UCX_RNDV_FRAG_SIZE=4m "
+            OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k -x UCX_RNDV_FRAG_SIZE=rocm:4m "
             #OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k "
             #OPTION="-x UCX_RNDV_PIPELINE_SEND_THRESH=256k "
             OPTION+="-x UCX_RNDV_THRESH=128 "
